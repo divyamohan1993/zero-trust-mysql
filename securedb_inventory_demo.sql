@@ -2,6 +2,9 @@
 -- Inventory domain for Zero-Trust MySQL: parts lifecycle, shipments, installs, replacements, full audit
 -- Uses proc-only writes, tenant scoping, tamper-evident audit. It seeds realistic demo data and exposes tenant-scoped views only.
 
+-- Usage: mysql --ssl-mode=VERIFY_CA -u migration -p -h <host> < securedb_inventory_demo.sql
+
+
 -- Assumptions:
 -- - Database: securedb (existing)
 -- - Tenant model exists or we seed a demo tenant
