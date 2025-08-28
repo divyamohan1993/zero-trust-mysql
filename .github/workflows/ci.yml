@@ -6,39 +6,35 @@ permissions: { contents: read }
 jobs:
   scan-and-verify:
     runs-on: ubuntu-22.04
-    env: { COSIGN_EXPERIMENTAL: "true" }
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
       - name: Install scanners
         run: |
-          curl -sSL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | bash
-          sudo mv gitleaks /usr/local/bin/
+          curl -sSL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | bash && sudo mv gitleaks /usr/local/bin/
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo bash -s -- -b /usr/local/bin
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sudo bash -s -- -b /usr/local/bin
           curl -sSfL https://get.opa.dev | sudo sh -s -- -b /usr/local/bin
-          curl -L https://github.com/open-policy-agent/conftest/releases/download/v0.57.0/conftest_0.57.0_Linux_x86_64.tar.gz | tar -xz
-          sudo mv conftest /usr/local/bin/
-          pip install semgrep
-      - name: Secrets scan (gitleaks)
-        run: gitleaks detect -v --redact --source . --config .gitleaks.toml || (echo "::error::gitleaks found issues"; exit 1)
+          curl -fsSL -o /tmp/conftest.tgz https://github.com/open-policy-agent/conftest/releases/download/v0.53.0/conftest_0.53.0_Linux_x86_64.tar.gz
+          sudo tar -xzf /tmp/conftest.tgz -C /usr/local/bin conftest
+          python -m pip install --upgrade pip && pip install semgrep
+      - name: Secrets scan
+        run: gitleaks detect -v --redact --source . --config .gitleaks.toml
       - name: SAST (semgrep)
-        run: semgrep ci --config .semgrep.yml
-      - name: SBOM (syft) and vuln scan (grype)
+        run: semgrep ci --config ./.semgrep.yml
+      - name: SBOM + vuln scan
         run: |
           syft dir:. -o json > sbom.json
           grype sbom:sbom.json -o table || true
-        continue-on-error: true
-      - name: Policy-as-code (Conftest/OPA) on MySQL config evidence
+      - name: Policy-as-code (OPA/Conftest)
         run: |
           if [ -f evidence/mysql_vars.json ]; then
             conftest test --policy policy evidence/mysql_vars.json
           else
             echo "No evidence/mysql_vars.json found; skipping policy tests"
           fi
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: ci-artifacts
           path: |
@@ -48,3 +44,17 @@ jobs:
             ./policy/
             ./evidence/*
           if-no-files-found: warn
+  terraform-security:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tfsec & tflint
+        run: |
+          curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      - name: Run tflint
+        run: |
+          if [ -d iac/terraform ]; then (cd iac/terraform && tflint --enable-rule=terraform_required_version); fi
+      - name: Run tfsec
+        run: |
+          if [ -d iac/terraform ]; then tfsec iac/terraform || true; fi
