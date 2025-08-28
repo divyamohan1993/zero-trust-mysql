@@ -1,0 +1,9 @@
+name: Bug report
+description: Create a report to help us improve
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes: { label: What happened?, description: "Steps, logs, expected vs actual" }
+    validations: { required: true }
