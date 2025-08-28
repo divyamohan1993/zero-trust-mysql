@@ -14,7 +14,10 @@ resource "google_compute_subnetwork" "subnet" {
 resource "google_compute_firewall" "ssh" {
   name    = "${var.network_name}-ssh"
   network = google_compute_network.net.name
-  allow { protocol = "tcp" ports = ["22"] }
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
   source_ranges = var.allow_cidrs
 }
 
