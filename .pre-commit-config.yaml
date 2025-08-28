@@ -1,0 +1,16 @@
+repos:
+- repo: https://github.com/jorisroovers/gitlint
+  rev: v0.19.1
+  hooks: [ { id: gitlint } ]
+- repo: https://github.com/adrienverge/yamllint
+  rev: v1.35.1
+  hooks: [ { id: yamllint } ]
+- repo: https://github.com/koalaman/shellcheck
+  rev: v0.10.0
+  hooks: [ { id: shellcheck } ]
+- repo: https://github.com/mvdan/sh
+  rev: v3.8.0
+  hooks: [ { id: shfmt, args: ["-i", "2", "-ci"] } ]
+- repo: https://github.com/igorshubovych/markdownlint-cli
+  rev: v0.42.0
+  hooks: [ { id: markdownlint } ]
