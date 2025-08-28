@@ -1,6 +1,10 @@
 
 # Zero-Trust MySQL Deployment (mTLS, HSM KMS, PQ-Hybrid, Tamper-Evident Audit)
 
+[![CodeQL](https://github.com/divyamohan1993/zero-trust-mysql/actions/workflows/codeql.yml/badge.svg)](../../actions/workflows/codeql.yml)
+[![CI](https://github.com/divyamohan1993/zero-trust-mysql/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+
+
 ## 1. What this is
 A production-grade deployment pattern for MySQL 8 on a hardened Linux VM that enforces:
 - Transport: TLS 1.3 **mTLS**; `require_secure_transport=ON`; strong cipher suites.
