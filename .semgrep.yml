@@ -1,0 +1,12 @@
+rules:
+- id: python-dangerous-subprocess
+  patterns:
+  - pattern: subprocess.Popen(...)
+  message: "Use of subprocess.Popen requires careful sanitization"
+  severity: WARNING
+  languages: [python]
+- id: bash-curl-pipe-sh
+  pattern: curl ... | sh
+  message: "curl | sh detected"
+  severity: ERROR
+  languages: [bash]

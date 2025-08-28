@@ -1,0 +1,8 @@
+title = "baseline"
+[allowlist]
+description = "Allow common false positives"
+paths = [
+  '''^docs/''',
+  '''^policy/''',
+  '''^iac/''',
+]

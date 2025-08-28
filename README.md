@@ -1,14 +1,14 @@
 
-# GOV Secure MySQL Deployment (Zero-Trust, mTLS, KMS, PQ-Hardened Audit)
+# Zero-Trust MySQL Deployment (mTLS, HSM KMS, PQ-Hybrid, Tamper-Evident Audit)
 
 ## 1. What this is
 A production-grade deployment pattern for MySQL 8 on a hardened Linux VM that enforces:
 - Transport: TLS 1.3 **mTLS**; `require_secure_transport=ON`; strong cipher suites.
 - Identity & Access: least privilege, **proc-only writes**, tenant isolation bound to per-connection context.
-- Data Protection: **client-side AES-256-GCM**; DEKs wrapped by **GCP HSM KMS** (envelope encryption).
-- Tamper Evidence: **append-only global hash-chained audit** with a one-minute **off-host anchor** to Cloud Logging → retention-locked GCS (WORM).
+- Data Protection: **client-side AES-256-GCM**; DEKs wrapped by an **HSM-backed KMS** (envelope encryption; e.g., GCP/AWS/Azure).
+- Tamper Evidence: **append-only global hash-chained audit** with a one-minute **off-host anchor** to SIEM/logging → retention-locked object storage (WORM; e.g., GCS/S3/Azure Immutable).
 - Host Hardening: firewall (UFW), fail2ban, locked server keys, secure MySQL config.
-- Proofs: automated **test bench** and **evidence bundle** demonstrating enforcement.
+- Proofs: automated **test bench**, **evidence bundle**, and optional **OpenSCAP STIG/CIS** scan outputs.
 
 The package includes outside-VM setup (PKI, KMS, WORM sink), a single **VM one-click** installer, a **PQ hybrid envelope** helper, and **proof-of-controls** scripts.
 
@@ -30,7 +30,7 @@ Non-goals: this design does not claim to protect against OS root with live memor
 - **Client**: performs AES-GCM encryption/decryption; obtains DEK via **GCP KMS (HSM)** Encrypt/Decrypt.
 - **MySQL VM**: hardened MySQL 8 with TLS1.3 + mTLS; PROC API; tenant isolation; audit triggers and off-host anchor.
 - **PKI (outside)**: local CA issuing server and client certificates for mTLS.
-- **GCP**: Cloud KMS (HSM) for DEK wrap; Cloud Logging + GCS with retention lock for WORM audit anchoring.
+- **KMS & Logging**: HSM-backed KMS for DEK wrap; centralized logging/SIEM + retention-locked object storage for WORM anchoring.
 
 ### 3.2 Data flow (write)
 1. Client gets KMS-wrapped DEK by calling `encrypt(kms_key, DEK)` (KMS never reveals CMK).
@@ -55,7 +55,7 @@ The schema holds an optional **PQ-wrapped** DEK (`pii_pq_wrapped_key`, `pq_alg`)
 
 ---
 
-## 4. What makes it "near-tamper proof" in this context
+## 4. What makes it tamper-evident in this context
 - **Zero-trust data plane**: app identities cannot bypass procedures; tenant isolation enforced on every call.
 - **No plaintext in DB**: encryption/decryption happen at the client with HSM-backed keys.
 - **Cryptographic accountability**: tamper-evident global audit chain anchored off-host to WORM.
@@ -89,11 +89,11 @@ The schema holds an optional **PQ-wrapped** DEK (`pii_pq_wrapped_key`, `pq_alg`)
    # copy pki_server.tar.gz to VM: /tmp/pki_server.tar.gz
    ```
 
-2. **KMS + WORM (workstation)**
+2. **KMS + WORM sink (workstation)**
    ```bash
    chmod +x outside_gcp_setup.sh
    PROJECT_ID=<id> BUCKET=gs://<worm_bucket> ./outside_gcp_setup.sh
-   # save the printed KMS key resource
+   # default script targets GCP; substitute your cloud’s KMS/logging/WORM equivalents if not on GCP
    ```
 
 3. **VM deploy**
@@ -175,7 +175,7 @@ Run `proof_suite.sh`. It checks:
 - Least privilege / proc-only writes.
 - Tenant isolation.
 - Audit **append-only** and chain integrity proof.
-- Off-host anchoring present.
+- (Optional) OpenSCAP/CIS hardening report included if `scripts/openscap_scan.sh` is run.
 - FIPS/AppArmor/SELinux signals.
 - Firewall and fail2ban status.
 An evidence tarball is created for assessment workflows.

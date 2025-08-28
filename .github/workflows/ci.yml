@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  scan-and-verify:
+    runs-on: ubuntu-22.04
+    env:
+      COSIGN_EXPERIMENTAL: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install scanners
+        run: |
+          curl -sSL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | bash
+          sudo mv gitleaks /usr/local/bin/
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo bash -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sudo bash -s -- -b /usr/local/bin
+          curl -sSfL https://get.opa.dev | sudo sh -s -- -b /usr/local/bin
+          pip install semgrep
+
+      - name: Secrets scan (gitleaks)
+        run: gitleaks detect -v --redact --source . --config .gitleaks.toml || (echo "::error::gitleaks found issues"; exit 1)
+
+      - name: SAST (semgrep)
+        run: semgrep ci --config .semgrep.yml
+
+      - name: SBOM (syft) and vuln scan (grype)
+        run: |
+          syft dir:. -o json > sbom.json
+          grype sbom:sbom.json -o table || true
+        continue-on-error: true
+
+      - name: Policy-as-code (Conftest/OPA) on MySQL config evidence
+        run: |
+          if [ -f evidence/mysql_vars.json ]; then
+            conftest test --policy policy evidence/mysql_vars.json
+          else
+            echo "No evidence/mysql_vars.json found; skipping policy tests"
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-artifacts
+          path: |
+            sbom.json
+            ./.semgrep.yml
+            ./.gitleaks.toml
+            ./policy/
+            ./evidence/*
+          if-no-files-found: warn

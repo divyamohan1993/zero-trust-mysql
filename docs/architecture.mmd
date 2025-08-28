@@ -1,0 +1,8 @@
+```mermaid
+flowchart LR
+A[Client\nAES-GCM + KMS + PQ wrap] -- mTLS --> B[MySQL VM\nTLS1.3+mTLS\nProc-only\nTenant ctx]
+B -- ciphertext+IV/AAD+wrapped DEK --> D[(Storage)]
+B -- chain head --> E[Syslog/Ops Agent]
+E --> F[Cloud Logging]
+F --> G[GCS WORM Bucket]
+A <-- decrypt via KMS --> H[HSM-backed KMS]
