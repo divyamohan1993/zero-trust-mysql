@@ -9,7 +9,7 @@ jobs:
   scan-and-verify:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
 
@@ -57,7 +57,7 @@ jobs:
   terraform-security:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install tfsec & tflint & terraform
         run: |
