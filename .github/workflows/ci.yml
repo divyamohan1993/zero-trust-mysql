@@ -43,7 +43,7 @@ jobs:
             echo "No evidence/mysql_vars.json found; skipping policy tests"
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ci-artifacts
           path: |
